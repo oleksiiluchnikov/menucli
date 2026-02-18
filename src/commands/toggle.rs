@@ -6,7 +6,18 @@ use crate::cli::output::write_toggle;
 use crate::menu::{MenuError, build_tree, press_node, resolve};
 use crate::types::ToggleOutput;
 
+/// Maximum number of attempts to confirm the toggle took effect.
+const MAX_RETRIES: u32 = 5;
+
+/// Initial delay (ms) between `AXPress` and the first re-read.
+const INITIAL_DELAY_MS: u64 = 50;
+
 /// Run `menucli toggle`.
+///
+/// After pressing the item, re-reads the menu tree up to [`MAX_RETRIES`] times
+/// with exponential back-off (`50 → 100 → 200 → 400 → 800 ms`) waiting for the
+/// app to update its AX checkmark state. If the state flips within that window
+/// we report the observed value; otherwise we infer `!checked_before`.
 ///
 /// # Errors
 ///
@@ -44,13 +55,28 @@ pub fn run(args: &ToggleArgs, ctx: &OutputCtx) -> Result<(), MenuError> {
     press_node(node)?;
     drop(_t_press);
 
-    // Rebuild the tree to read the new checked state.
-    let _t_tree2 = ctx.timer("build_tree[2]");
-    let tree2 = build_tree(pid, None)?;
-    drop(_t_tree2);
+    // Poll for the AX state to flip, with exponential back-off.
+    let _t_poll = ctx.timer("poll_state");
+    let mut delay_ms = INITIAL_DELAY_MS;
+    let mut checked_after = !checked_before; // optimistic default
+    for attempt in 0..MAX_RETRIES {
+        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
 
-    let node2 = resolve(&tree2, &args.path)?;
-    let checked_after = node2.checked;
+        if let Ok(tree2) = build_tree(pid, None) {
+            if let Ok(node2) = resolve(&tree2, &args.path) {
+                if node2.checked != checked_before {
+                    // Confirmed: the state flipped.
+                    checked_after = node2.checked;
+                    break;
+                }
+            }
+        }
+
+        if attempt + 1 < MAX_RETRIES {
+            delay_ms *= 2;
+        }
+    }
+    drop(_t_poll);
 
     let output = ToggleOutput {
         path,
