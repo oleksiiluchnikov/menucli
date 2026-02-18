@@ -1,0 +1,45 @@
+[package]
+name = "menucli"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Query and interact with macOS app menu bars from the CLI"
+license = "MIT"
+
+[dependencies]
+# macOS Accessibility API FFI
+accessibility-sys = "0.2.0"
+core-foundation = "0.10.1"
+core-foundation-sys = "0.8.7"
+
+# Objective-C bindings for NSWorkspace (app PID resolution)
+objc2 = "0.6.0"
+objc2-foundation = "0.3.0"
+objc2-app-kit = { version = "0.3.0", features = ["NSWorkspace", "NSRunningApplication"] }
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Fuzzy matching
+nucleo-matcher = "0.3.1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Table rendering
+comfy-table = { version = "7.2", default-features = false }
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true
+codegen-units = 1
+
+[profile.dev]
+opt-level = 0
+debug = true
