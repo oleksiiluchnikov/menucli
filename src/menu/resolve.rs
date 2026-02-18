@@ -2,7 +2,7 @@
 ///
 /// Resolution strategy (in priority order):
 ///
-/// 1. **Exact path match**: If input contains " > ", walk the tree level-by-level
+/// 1. **Exact path match**: If input contains "::", walk the tree level-by-level
 ///    with exact title matching.
 /// 2. **Exact title match (leaf)**: Search all leaf items for an exact title match.
 ///    Succeeds only if exactly one item matches.
@@ -16,7 +16,7 @@ use nucleo_matcher::{
 
 use super::{
     errors::MenuError,
-    tree::{MenuNode, PATH_SEP},
+    tree::{MenuNode, PATH_SEP, split_path, unescape_segment},
 };
 
 /// Minimum score ratio between 1st and 2nd result to auto-resolve fuzzy match.
@@ -58,14 +58,17 @@ pub fn resolve<'a>(nodes: &'a [MenuNode], query: &str) -> Result<&'a MenuNode, M
     resolve_fuzzy(nodes, query)
 }
 
-/// Walk the tree level-by-level using the path segments split by PATH_SEP.
+/// Walk the tree level-by-level using the path segments split by `::`.
+///
+/// Handles escaped `\::` in segments via [`split_path`] / [`unescape_segment`].
 fn resolve_by_exact_path<'a>(nodes: &'a [MenuNode], path: &str) -> Result<&'a MenuNode, MenuError> {
-    let segments: Vec<&str> = path.split(PATH_SEP).collect();
+    let segments = split_path(path);
     let mut current = nodes;
     let mut found: Option<&MenuNode> = None;
 
     for segment in &segments {
-        let seg_lower = segment.to_lowercase();
+        let unescaped = unescape_segment(segment);
+        let seg_lower = unescaped.to_lowercase();
         let matched = current.iter().find(|n| n.title.to_lowercase() == seg_lower);
         match matched {
             Some(node) => {
@@ -168,17 +171,17 @@ mod tests {
                 "File",
                 "File",
                 vec![
-                    node("New", "File > New", vec![]),
-                    node("Save As…", "File > Save As…", vec![]),
-                    node("Close", "File > Close", vec![]),
+                    node("New", "File::New", vec![]),
+                    node("Save As…", "File::Save As…", vec![]),
+                    node("Close", "File::Close", vec![]),
                 ],
             ),
             node(
                 "Edit",
                 "Edit",
                 vec![
-                    node("Copy", "Edit > Copy", vec![]),
-                    node("Paste", "Edit > Paste", vec![]),
+                    node("Copy", "Edit::Copy", vec![]),
+                    node("Paste", "Edit::Paste", vec![]),
                 ],
             ),
         ]
@@ -187,23 +190,23 @@ mod tests {
     #[test]
     fn test_exact_path() {
         let t = tree();
-        let result = resolve(&t, "File > Save As…").unwrap();
-        assert_eq!(result.path, "File > Save As…");
+        let result = resolve(&t, "File::Save As…").unwrap();
+        assert_eq!(result.path, "File::Save As…");
     }
 
     #[test]
     fn test_exact_title_unique() {
         let t = tree();
         let result = resolve(&t, "Paste").unwrap();
-        assert_eq!(result.path, "Edit > Paste");
+        assert_eq!(result.path, "Edit::Paste");
     }
 
     #[test]
     fn test_exact_title_ambiguous() {
         // "New" and "Copy" don't collide, but let's test ambiguity with a custom tree.
         let t = vec![
-            node("File", "File", vec![node("Save", "File > Save", vec![])]),
-            node("Edit", "Edit", vec![node("Save", "Edit > Save", vec![])]),
+            node("File", "File", vec![node("Save", "File::Save", vec![])]),
+            node("Edit", "Edit", vec![node("Save", "Edit::Save", vec![])]),
         ];
         let result = resolve(&t, "save");
         assert!(matches!(result, Err(MenuError::AmbiguousMatch { .. })));
@@ -212,7 +215,7 @@ mod tests {
     #[test]
     fn test_not_found() {
         let t = tree();
-        let result = resolve(&t, "File > NonExistent");
+        let result = resolve(&t, "File::NonExistent");
         assert!(matches!(result, Err(MenuError::ItemNotFound { .. })));
     }
 }

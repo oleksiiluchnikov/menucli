@@ -126,7 +126,7 @@ pub struct SearchArgs {
 #[derive(Debug, Parser)]
 pub struct ClickArgs {
     /// Menu item path or partial match.
-    /// Examples: "File > Save As…", "Save As", "save as"
+    /// Examples: "File::Save As…", "Save As", "save as"
     pub path: String,
 
     /// Target application.

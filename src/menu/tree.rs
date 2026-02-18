@@ -12,16 +12,76 @@ use crate::menu::shortcut::format_shortcut;
 
 use super::errors::MenuError;
 
-/// Path separator used in full item paths. Space-arrow-space chosen for
-/// agent-readability: unambiguous and matches macOS/Raycast conventions.
-pub const PATH_SEP: &str = " > ";
+/// Path separator used in full item paths.
+///
+/// Double-colon `::` is compact, shell-friendly (no quoting needed for simple
+/// paths like `File::Save`), and unambiguous in practice — real menu titles
+/// almost never contain `::`. When they do, `escape_title` replaces the
+/// literal `::` with `\::` so round-tripping is lossless.
+pub const PATH_SEP: &str = "::";
+
+/// Escape literal `::` in a menu title so it won't be confused with [`PATH_SEP`].
+///
+/// Titles containing `::` (extremely rare) get it replaced with `\::`.
+/// Titles without `::` are returned as-is (zero allocation).
+#[must_use]
+pub fn escape_title(title: &str) -> std::borrow::Cow<'_, str> {
+    if title.contains(PATH_SEP) {
+        std::borrow::Cow::Owned(title.replace("::", "\\::"))
+    } else {
+        std::borrow::Cow::Borrowed(title)
+    }
+}
+
+/// Split a full menu path on the unescaped `::` separator.
+///
+/// `\::` inside a segment is preserved (not treated as a split point).
+/// After splitting, call [`unescape_segment`] on each piece to get the raw title.
+#[must_use]
+pub fn split_path(path: &str) -> Vec<&str> {
+    let mut segments = Vec::new();
+    let mut start = 0;
+    let bytes = path.as_bytes();
+    let len = bytes.len();
+    let mut i = 0;
+
+    while i < len {
+        if i + 2 <= len && &bytes[i..i + 2] == b"::" {
+            // Check if preceded by backslash (escaped).
+            if i > 0 && bytes[i - 1] == b'\\' {
+                // Escaped `\::` — skip, not a separator.
+                i += 2;
+            } else {
+                segments.push(&path[start..i]);
+                i += 2;
+                start = i;
+            }
+        } else {
+            i += 1;
+        }
+    }
+    segments.push(&path[start..]);
+    segments
+}
+
+/// Remove escape sequences from a single path segment.
+///
+/// Converts `\::` back to `::`.
+#[must_use]
+pub fn unescape_segment(seg: &str) -> std::borrow::Cow<'_, str> {
+    if seg.contains("\\::") {
+        std::borrow::Cow::Owned(seg.replace("\\::", "::"))
+    } else {
+        std::borrow::Cow::Borrowed(seg)
+    }
+}
 
 /// A node in the menu tree.
 #[derive(Debug, Clone)]
 pub struct MenuNode {
     /// Display title of the item (e.g., "Save As…").
     pub title: String,
-    /// Full path from root (e.g., "File > Save As…").
+    /// Full path from root (e.g., "File::Save As…").
     pub path: String,
     /// Whether the item is enabled (clickable).
     pub enabled: bool,
@@ -105,10 +165,11 @@ fn walk_element(
 
     let shortcut = format_shortcut(cmd_char.as_deref(), cmd_mods);
 
+    let escaped = escape_title(&title);
     let path = if parent_path.is_empty() {
-        title.clone()
+        escaped.into_owned()
     } else {
-        format!("{parent_path}{PATH_SEP}{title}")
+        format!("{parent_path}{PATH_SEP}{escaped}")
     };
 
     // Recurse into children unless at max depth.

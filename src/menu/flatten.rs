@@ -6,7 +6,7 @@ use super::tree::MenuNode;
 pub struct FlatItem {
     /// Display title (leaf name only).
     pub title: String,
-    /// Full path from root (e.g., "File > Save As…").
+    /// Full path from root (e.g., "File::Save As…").
     pub path: String,
     /// Whether the item is enabled.
     pub enabled: bool,
@@ -82,12 +82,12 @@ mod tests {
 
     #[test]
     fn test_flatten_nested() {
-        let child = mock_node("New", "File > New", vec![]);
+        let child = mock_node("New", "File::New", vec![]);
         let parent = mock_node("File", "File", vec![child]);
         let flat = flatten(&[parent]);
         assert_eq!(flat.len(), 2);
         assert_eq!(flat[0].path, "File");
-        assert_eq!(flat[1].path, "File > New");
+        assert_eq!(flat[1].path, "File::New");
         assert_eq!(flat[0].children_count, 1);
         assert_eq!(flat[1].children_count, 0);
     }

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct MenuItemOutput {
     /// Display title (leaf name, e.g., "Save As…").
     pub title: String,
-    /// Full path from root (e.g., "File > Save As…").
+    /// Full path from root (e.g., "File::Save As…").
     pub path: String,
     /// Whether the item is enabled (clickable).
     pub enabled: bool,

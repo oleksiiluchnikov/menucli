@@ -38,7 +38,7 @@ impl Default for SearchOptions {
 
 /// Search menu items by query string.
 ///
-/// Searches the `path` field (full path like "File > Save As…") which naturally
+/// Searches the `path` field (full path like "File::Save As…") which naturally
 /// gives higher scores when the query matches words at boundaries.
 ///
 /// Results are sorted by score descending (best match first).
