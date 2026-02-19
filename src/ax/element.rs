@@ -1,10 +1,11 @@
 /// Safe wrapper around AXUIElementRef with batch attribute fetching.
 use accessibility_sys::{
-    AXUIElementCopyAttributeValue, AXUIElementCopyMultipleAttributeValues,
-    AXUIElementCreateApplication, AXUIElementGetPid, AXUIElementPerformAction, AXUIElementRef,
-    AXUIElementSetMessagingTimeout, kAXChildrenAttribute, kAXEnabledAttribute, kAXErrorSuccess,
+    kAXChildrenAttribute, kAXEnabledAttribute, kAXErrorSuccess, kAXExtrasMenuBarAttribute,
     kAXMenuBarAttribute, kAXMenuItemCmdCharAttribute, kAXMenuItemCmdModifiersAttribute,
-    kAXMenuItemMarkCharAttribute, kAXRoleAttribute, kAXTitleAttribute,
+    kAXMenuItemMarkCharAttribute, kAXMenuItemPrimaryUIElementAttribute, kAXRoleAttribute,
+    kAXTitleAttribute, kAXVisibleChildrenAttribute, AXUIElementCopyAttributeValue,
+    AXUIElementCopyMultipleAttributeValues, AXUIElementCreateApplication, AXUIElementGetPid,
+    AXUIElementPerformAction, AXUIElementRef, AXUIElementSetMessagingTimeout,
 };
 use core_foundation::{
     array::{CFArray, CFArrayRef},
@@ -13,7 +14,7 @@ use core_foundation::{
     string::{CFString, CFStringRef},
 };
 
-use super::errors::{AXError, check_ax_error};
+use super::errors::{check_ax_error, AXError};
 
 /// Timeout in seconds for AX API calls to unresponsive apps.
 const AX_MESSAGING_TIMEOUT_SECS: f32 = 1.0;
@@ -107,6 +108,18 @@ impl AXElement {
         self.copy_element_attribute(kAXMenuBarAttribute)
     }
 
+    /// Get the extras (status bar / menu extras) menu bar for an application element.
+    ///
+    /// This is the right-side menu bar containing items like Wi-Fi, Bluetooth, etc.
+    /// Each app owns its own extras; iterate all running apps to find all status items.
+    ///
+    /// # Errors
+    ///
+    /// Returns `AXError::AttributeUnsupported` if the app has no extras menu bar.
+    pub fn extras_menu_bar(&self) -> Result<AXElement, AXError> {
+        self.copy_element_attribute(kAXExtrasMenuBarAttribute)
+    }
+
     /// Copy a single attribute value as an `AXElement`.
     fn copy_element_attribute(&self, attr: &'static str) -> Result<AXElement, AXError> {
         let attr_cf = CFString::from_static_string(attr);
@@ -129,6 +142,18 @@ impl AXElement {
     /// Returns `AXError` if children cannot be fetched.
     pub fn children(&self) -> Result<Vec<AXElement>, AXError> {
         self.copy_array_attribute(kAXChildrenAttribute)
+    }
+
+    /// Get visible child elements (respects system hiding by Bartender/Ice).
+    ///
+    /// For extras menu bars, use this instead of `children()` to only get items
+    /// the user can actually see (not hidden by menu bar managers).
+    ///
+    /// # Errors
+    ///
+    /// Returns `AXError` if visible children cannot be fetched.
+    pub fn visible_children(&self) -> Result<Vec<AXElement>, AXError> {
+        self.copy_array_attribute(kAXVisibleChildrenAttribute)
     }
 
     /// Copy an array attribute as a `Vec<AXElement>`.
@@ -317,6 +342,7 @@ pub const MENU_ITEM_ATTRS: &[&str] = &[
     kAXMenuItemCmdModifiersAttribute,
     kAXRoleAttribute,
     kAXChildrenAttribute,
+    kAXMenuItemPrimaryUIElementAttribute,
 ];
 
 /// Indices into `MENU_ITEM_ATTRS`.
@@ -329,4 +355,6 @@ pub mod attr_idx {
     pub const ROLE: usize = 5;
     #[allow(dead_code)]
     pub const CHILDREN: usize = 6;
+    /// Non-None when this item is an alternate of another item.
+    pub const PRIMARY_UI_ELEMENT: usize = 7;
 }

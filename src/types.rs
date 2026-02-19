@@ -24,6 +24,18 @@ pub struct MenuItemOutput {
     pub children_count: usize,
     /// Depth from root (1 = top-level menu bar item, 2+ = nested).
     pub depth: usize,
+    /// Whether this item is an Option-key alternate.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub is_alternate: bool,
+    /// Title of the primary item this alternate replaces, if any.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alternate_of: Option<String>,
+    /// Name of the app that owns this item (populated for extras across all apps).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub app_name: Option<String>,
+    /// PID of the app that owns this item (populated for extras across all apps).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub app_pid: Option<i32>,
 }
 
 /// A menu item in tree representation (nested).
@@ -44,6 +56,12 @@ pub struct MenuTreeOutput {
     pub role: String,
     /// Nested children.
     pub children: Vec<MenuTreeOutput>,
+    /// Whether this item is an Option-key alternate.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub is_alternate: bool,
+    /// Title of the primary item this alternate replaces, if any.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alternate_of: Option<String>,
 }
 
 /// A search result with match score.
@@ -62,6 +80,12 @@ pub struct SearchResultOutput {
     pub shortcut: Option<String>,
     /// Match score (higher = better). 0 for exact matches.
     pub score: u32,
+    /// Whether this item is an Option-key alternate.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub is_alternate: bool,
+    /// Title of the primary item this alternate replaces, if any.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alternate_of: Option<String>,
 }
 
 /// Running application info.

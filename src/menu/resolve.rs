@@ -10,13 +10,13 @@
 ///    significantly higher score than the second (confidence > threshold).
 /// 4. **Ambiguity error**: If multiple items match with similar scores.
 use nucleo_matcher::{
-    Matcher, Utf32Str,
     pattern::{CaseMatching, Normalization, Pattern},
+    Matcher, Utf32Str,
 };
 
 use super::{
     errors::MenuError,
-    tree::{MenuNode, PATH_SEP, split_path, unescape_segment},
+    tree::{split_path, unescape_segment, MenuNode, PATH_SEP},
 };
 
 /// Minimum score ratio between 1st and 2nd result to auto-resolve fuzzy match.
@@ -162,6 +162,8 @@ mod tests {
             depth: 1,
             children,
             element: None,
+            is_alternate: false,
+            alternate_of: None,
         }
     }
 

@@ -7,8 +7,8 @@ pub mod search;
 pub mod state;
 pub mod toggle;
 
-use crate::cli::OutputCtx;
 use crate::cli::args::Command;
+use crate::cli::OutputCtx;
 use crate::menu::MenuError;
 
 /// Dispatch a parsed `Command` to its handler.

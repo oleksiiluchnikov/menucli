@@ -1,8 +1,8 @@
 /// `apps` command: list running applications with PIDs.
 use crate::ax::list_running_apps;
-use crate::cli::OutputCtx;
 use crate::cli::args::AppsArgs;
 use crate::cli::output::write_apps;
+use crate::cli::OutputCtx;
 use crate::menu::MenuError;
 use crate::types::AppInfoOutput;
 

@@ -3,4 +3,4 @@ pub mod args;
 pub mod output;
 
 pub use args::{Cli, OutputFormat};
-pub use output::{OutputCtx, write_error};
+pub use output::{write_error, OutputCtx};

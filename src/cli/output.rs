@@ -1,7 +1,7 @@
 /// Output formatting: JSON, table, path/id modes. TTY detection.
 use std::io::{IsTerminal, Write};
 
-use comfy_table::{Cell, Table, presets::UTF8_BORDERS_ONLY};
+use comfy_table::{presets::UTF8_BORDERS_ONLY, Cell, Table};
 use serde::Serialize;
 
 use super::args::OutputFormat;
@@ -33,6 +33,8 @@ pub struct OutputCtx {
     pub no_header: bool,
     /// When true, print AX timing spans to stderr.
     pub debug: bool,
+    /// When true, include alternate (Option-key) menu items in output.
+    pub alternates: bool,
 }
 
 impl OutputCtx {
@@ -44,6 +46,7 @@ impl OutputCtx {
         fields: Option<&str>,
         no_header: bool,
         debug: bool,
+        alternates: bool,
     ) -> Self {
         let format = resolve_format(fmt, json_flag);
         let fields = fields.map(|f| f.split(',').map(str::trim).map(str::to_owned).collect());
@@ -52,6 +55,7 @@ impl OutputCtx {
             fields,
             no_header,
             debug,
+            alternates,
         }
     }
 
@@ -95,7 +99,13 @@ fn write_menu_items_table(items: &[MenuItemOutput], ctx: &OutputCtx) {
     let mut table = Table::new();
     table.load_preset(UTF8_BORDERS_ONLY);
 
+    // Show APP column only when items have app attribution (extras across all apps).
+    let show_app = items.iter().any(|i| i.app_name.is_some());
+
     let mut headers: Vec<Cell> = Vec::new();
+    if show_app && ctx.include_field("app") {
+        headers.push(Cell::new("APP"));
+    }
     if ctx.include_field("path") {
         headers.push(Cell::new("PATH"));
     }
@@ -118,8 +128,16 @@ fn write_menu_items_table(items: &[MenuItemOutput], ctx: &OutputCtx) {
 
     for item in items {
         let mut row: Vec<Cell> = Vec::new();
+        if show_app && ctx.include_field("app") {
+            row.push(Cell::new(item.app_name.as_deref().unwrap_or("")));
+        }
         if ctx.include_field("path") {
-            row.push(Cell::new(&item.path));
+            let path_str = if item.is_alternate {
+                format!("{} [alt]", item.path)
+            } else {
+                item.path.clone()
+            };
+            row.push(Cell::new(path_str));
         }
         if ctx.include_field("enabled") {
             row.push(Cell::new(if item.enabled { "yes" } else { "no" }));
@@ -191,8 +209,9 @@ fn print_tree_visual(node: &MenuTreeOutput, prefix: &str, is_last: bool, ctx: &O
         .unwrap_or_default();
     let enabled_str = if !node.enabled { " (disabled)" } else { "" };
     let checked_str = if node.checked { " ✓" } else { "" };
+    let alt_str = if node.is_alternate { " [alt]" } else { "" };
     println!(
-        "{prefix}{connector}{}{shortcut_str}{enabled_str}{checked_str}",
+        "{prefix}{connector}{}{shortcut_str}{enabled_str}{checked_str}{alt_str}",
         node.title
     );
 

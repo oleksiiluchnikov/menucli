@@ -1,7 +1,7 @@
 /// Fuzzy and exact search over flat menu items.
 use nucleo_matcher::{
-    Matcher, Utf32Str,
     pattern::{CaseMatching, Normalization, Pattern},
+    Matcher, Utf32Str,
 };
 
 use super::flatten::FlatItem;

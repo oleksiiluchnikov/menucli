@@ -10,7 +10,7 @@ mod types;
 
 use clap::Parser;
 
-use cli::{Cli, OutputCtx, write_error};
+use cli::{write_error, Cli, OutputCtx};
 use types::ErrorOutput;
 
 fn main() {
@@ -22,6 +22,7 @@ fn main() {
         cli.fields.as_deref(),
         cli.no_header,
         cli.debug,
+        cli.alternates,
     );
 
     match commands::dispatch(&cli.command, &ctx) {

@@ -5,6 +5,6 @@ pub mod errors;
 pub mod permissions;
 
 pub use app::{list_running_apps, resolve_target};
-pub use element::{AXElement, AttributeValue, MENU_ITEM_ATTRS, attr_idx};
+pub use element::{attr_idx, AXElement, AttributeValue, MENU_ITEM_ATTRS};
 pub use errors::AXError;
 pub use permissions::{ensure_trusted, permission_instructions};

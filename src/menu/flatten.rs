@@ -20,6 +20,10 @@ pub struct FlatItem {
     pub depth: usize,
     /// Number of direct children (0 for leaf items).
     pub children_count: usize,
+    /// Whether this item is an Option-key alternate.
+    pub is_alternate: bool,
+    /// Title of the primary item this alternate replaces, if any.
+    pub alternate_of: Option<String>,
 }
 
 /// Flatten a tree of `MenuNode`s into a `Vec<FlatItem>`.
@@ -44,6 +48,8 @@ fn flatten_node(node: &MenuNode, out: &mut Vec<FlatItem>) {
         role: node.role.clone(),
         depth: node.depth,
         children_count: node.children.len(),
+        is_alternate: node.is_alternate,
+        alternate_of: node.alternate_of.clone(),
     });
     for child in &node.children {
         flatten_node(child, out);
@@ -65,6 +71,8 @@ mod tests {
             depth: 1,
             children,
             element: None,
+            is_alternate: false,
+            alternate_of: None,
         }
     }
 

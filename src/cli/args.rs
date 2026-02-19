@@ -31,6 +31,11 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub debug: bool,
 
+    /// Include Option-key alternate menu items in output.
+    /// Alternates are always detected internally; this flag reveals them.
+    #[arg(long, global = true)]
+    pub alternates: bool,
+
     #[command(subcommand)]
     pub command: Command,
 }
@@ -97,6 +102,11 @@ pub struct ListArgs {
     /// Maximum recursion depth (default: unlimited).
     #[arg(long, value_name = "N")]
     pub depth: Option<usize>,
+
+    /// List status bar / menu extras (right-side menu bar) instead of app menus.
+    /// Without --app, scans all running apps.
+    #[arg(long)]
+    pub extras: bool,
 }
 
 /// Arguments for `menucli search`.
@@ -120,6 +130,10 @@ pub struct SearchArgs {
     /// Case-sensitive matching (default: smart-case).
     #[arg(long)]
     pub case_sensitive: bool,
+
+    /// Search status bar / menu extras instead of app menus.
+    #[arg(long)]
+    pub extras: bool,
 }
 
 /// Arguments for `menucli click`.
@@ -140,6 +154,10 @@ pub struct ClickArgs {
     /// Require exact path match (no fuzzy resolution).
     #[arg(long)]
     pub exact: bool,
+
+    /// Click a status bar / menu extras item instead of an app menu item.
+    #[arg(long)]
+    pub extras: bool,
 }
 
 /// Arguments for `menucli toggle`.
@@ -155,6 +173,10 @@ pub struct ToggleArgs {
     /// Show current state without toggling.
     #[arg(long)]
     pub dry_run: bool,
+
+    /// Toggle a status bar / menu extras item.
+    #[arg(long)]
+    pub extras: bool,
 }
 
 /// Arguments for `menucli state`.
@@ -166,6 +188,10 @@ pub struct StateArgs {
     /// Target application.
     #[arg(long, value_name = "NAME|PID|BUNDLE_ID")]
     pub app: Option<String>,
+
+    /// Get state of a status bar / menu extras item.
+    #[arg(long)]
+    pub extras: bool,
 }
 
 /// Arguments for `menucli apps`.

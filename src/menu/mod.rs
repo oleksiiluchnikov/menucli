@@ -7,7 +7,10 @@ pub mod shortcut;
 pub mod tree;
 
 pub use errors::MenuError;
-pub use flatten::flatten;
+pub use flatten::{flatten, FlatItem};
 pub use resolve::resolve;
-pub use search::{SearchOptions, search};
-pub use tree::{MenuNode, build_tree, press_node};
+pub use search::{search, SearchOptions};
+pub use tree::{
+    build_all_extras, build_extras_tree, build_tree, build_tree_with_opts, press_node,
+    ExtrasResult, MenuNode, TreeOptions,
+};
