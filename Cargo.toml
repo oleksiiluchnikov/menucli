@@ -5,6 +5,10 @@ edition = "2024"
 rust-version = "1.85"
 description = "Query and interact with macOS app menu bars from the CLI"
 license = "MIT"
+repository = "https://github.com/oleksiiluchnikov/menucli"
+homepage = "https://github.com/oleksiiluchnikov/menucli"
+keywords = ["macos", "accessibility", "menu", "cli", "automation"]
+categories = ["command-line-utilities", "os::macos-apis"]
 
 [dependencies]
 # macOS Accessibility API FFI

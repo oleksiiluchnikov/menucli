@@ -115,11 +115,13 @@ pub struct TreeOptions {
 
 /// Build the full menu tree for an application, given its PID.
 ///
+/// Convenience wrapper around [`build_tree_with_opts`] with alternates excluded.
 /// Top-level menu bar items are walked in parallel threads.
 ///
 /// # Errors
 ///
 /// Returns `MenuError` if the AX API fails or permissions are missing.
+#[allow(dead_code)]
 pub fn build_tree(pid: i32, max_depth: Option<usize>) -> Result<Vec<MenuNode>, MenuError> {
     build_tree_with_opts(
         pid,
