@@ -1,174 +1,186 @@
 # menucli
 
-Query and interact with macOS app menu bars from the CLI via the Accessibility API.
+Click any macOS menu item from the terminal. Status bar too.
 
-Built for LLM agents, Hammerspoon replacements, and keyboard-driven workflows. Walks any app's menu tree, fuzzy-resolves items by partial name, clicks them, toggles checkmarks, and reads state -- all from the terminal. Structured JSON output, deterministic exit codes, and TTY-aware formatting.
+<!-- TODO: Add demo GIF showing `menucli click "save as" --app TextEdit --dry-run` -->
 
-## Features
+```sh
+$ menucli click "save as" --app TextEdit --dry-run
+```
+```json
+{
+  "title": "Save As…",
+  "path": "File::Save As…",
+  "enabled": true,
+  "shortcut": "⇧⌘S",
+  "role": "AXMenuItem"
+}
+```
 
-- **Full menu tree walking** -- list every menu item for any running app, nested or flat
-- **Fuzzy resolution** -- `menucli click "save as"` just works (smart-case, auto-disambiguation)
-- **Status bar extras** -- access right-side menu bar items (Wi-Fi, Bluetooth, 1Password, Raycast) via `--extras`
-- **Option-key alternates** -- reveal hidden alternate items with `--alternates`
-- **7 output formats**: json, compact, ndjson, table, path, id, auto
-- **TTY auto-detection** -- table for humans, JSON for pipes (zero flags needed)
-- **Field projection** (`--fields title,path,shortcut`) to limit output
-- **`--dry-run`** on click/toggle -- preview resolved item without acting
-- **Toggle verification** -- re-reads AX state with exponential backoff to confirm toggle took effect
-- **App targeting** by name, PID, or bundle ID -- defaults to frontmost app
-- **Parallel tree walking** -- top-level menu bar items walked concurrently via `std::thread::scope`
-- **Batch AX fetching** -- single IPC round-trip per element via `AXUIElementCopyMultipleAttributeValues`
-- **Deterministic exit codes** -- `0` success, `1` error, `2` not found, `3` ambiguous, `10` no permission
+Type a partial name. menucli fuzzy-matches it, resolves the full path, and clicks it. Or just previews what would happen.
+
+## Why menucli?
+
+### Click any menu item by name
+
+No more mousing through nested menus. Type what you want, menucli finds it.
+
+```sh
+# Fuzzy match -- "save as" resolves to "File::Save As…"
+menucli click "save as" --app TextEdit
+
+# Exact path when you need precision
+menucli click "File::Save As…" --app TextEdit --exact
+
+# Preview first, click later
+menucli click "save as" --app TextEdit --dry-run
+
+# Target any app by name, PID, or bundle ID
+menucli click "Preferences…" --app com.apple.Safari
+```
+
+### Access the status bar
+
+Wi-Fi, Bluetooth, 1Password, Raycast -- anything with a menu bar icon is scriptable.
+
+```sh
+# List every status bar item across all running apps
+menucli list --extras
+
+# Filter to a single app
+menucli list --extras --app Raycast
+
+# Search and click status bar items
+menucli search "Pull" --extras --app Raycast
+menucli click "Open My Pull Requests" --extras --app Raycast
+```
+
+No other CLI tool does this.
+
+### Script toggles and read state
+
+Toggle checkmark menu items and verify the result. menucli re-reads the actual AX state with exponential backoff -- no guessing.
+
+```sh
+# Toggle a setting and get the new state
+menucli toggle "View::Show Sidebar" --app Finder
+
+# Read current state without changing it
+menucli state "View::Show Path Bar" --app Finder
+
+# Check state in scripts
+menucli state "View::Show Path Bar" --app Finder --json | jq '.checked'
+```
+
+### Reveal hidden alternate items
+
+macOS hides Option-key alternates (e.g., "About This Mac" has a hidden "System Information…"). Surface them all:
+
+```sh
+menucli --alternates list --app Finder
+menucli --alternates search "System" --app Finder
+```
 
 ## Install
 
 Requires Rust and macOS.
 
 ```sh
+# From GitHub
+cargo install --git https://github.com/oleksiiluchnikov/menucli.git
+
+# Or clone and build
 git clone https://github.com/oleksiiluchnikov/menucli.git
 cd menucli
 cargo install --path .
 ```
 
-### Prerequisites
+### Accessibility permission
 
-macOS Accessibility permission is required. Grant it in:
+menucli uses the macOS Accessibility API. Grant permission in:
 
 **System Settings > Privacy & Security > Accessibility**
 
-Add your terminal app (Ghostty, iTerm2, Terminal.app, etc.) to the list.
+Add your terminal app (Ghostty, iTerm2, Terminal.app, etc.).
 
 ```sh
 # Check if permission is granted
 menucli check-access
 ```
 
-## Usage
+## Quick Start
 
 ```sh
-# List all menu items for the frontmost app (table in TTY, JSON when piped)
+# List all menu items for the frontmost app
 menucli list
 
-# List menu items for a specific app
+# List a specific app's menus
 menucli list --app Finder
-
-# Flat list with full paths
-menucli list --flat --app Safari
 
 # Search for a menu item
 menucli search "save" --app Finder
 
-# Click a menu item by fuzzy match
-menucli click "save as" --app TextEdit
+# Click it
+menucli click "save" --app Finder
 
-# Click by exact path
-menucli click "File::Save As…" --app TextEdit --exact
-
-# Dry run -- preview what would be clicked
-menucli click "save as" --app TextEdit --dry-run
-
-# Toggle a checkmark item and report new state
-menucli toggle "View::Show Sidebar" --app Finder
-
-# Get current state of a menu item
-menucli state "View::Show Path Bar" --app Finder
-
-# List running apps with PIDs
+# List running apps
 menucli apps
 ```
 
-### Status Bar Extras
+## Agent-friendly by design
 
-Access right-side menu bar items (Wi-Fi, Bluetooth, 1Password, etc.):
+Built for LLM agents, shell scripts, and CI pipelines. Zero interactive prompts, ever.
 
-```sh
-# List all status bar items from all running apps
-menucli list --extras
+- **Structured JSON on stdout** -- machine-parseable, no human prose mixed in
+- **TTY auto-detection** -- table for humans, JSON for pipes (zero flags needed)
+- **7 output formats** -- json, compact, ndjson, table, path, id, auto
+- **Field projection** -- `--fields title,path,shortcut` to limit output
+- **`--dry-run`** -- preview resolved items without acting
+- **`--no-header`** -- strip table headers for awk/cut pipelines
+- **Errors on stderr as JSON** -- agents parse errors the same way they parse results
+- **Zero config** -- no setup, no auth, no config files. Install and run.
 
-# Filter to a specific app's status bar items
-menucli list --extras --app Raycast
+### Output formats
 
-# Search within status bar items
-menucli search "Pull" --extras --app Raycast
+| Format | When to use | Example |
+|--------|-------------|---------|
+| `json` | Piping to jq, agent consumption | `[{"title":"Save","path":"File::Save"}]` |
+| `compact` | Minimal JSON, single line | Same, no whitespace |
+| `ndjson` | Streaming, large datasets | One JSON object per line |
+| `table` | Human reading (default in terminal) | Aligned columns with headers |
+| `path` | Piping paths to other commands | `File::Save As…\n` |
+| `id` | Titles only | `Save As…\n` |
 
-# Click a status bar menu item
-menucli click "Open My Pull Requests" --extras --app Raycast
-```
-
-### Option-Key Alternates
-
-Reveal hidden alternate menu items (the ones you see when holding Option):
-
-```sh
-# Show alternates alongside regular items
-menucli --alternates list --app Finder
-
-# Search including alternates
-menucli --alternates search "System" --app Finder
-```
-
-### Output Formats
+### Pipe composition
 
 ```sh
-# JSON (explicit)
-menucli list --app Finder --json
+# List all keyboard shortcuts in an app
+menucli list --app Safari --flat --json --fields path,shortcut \
+  | jq '.[] | select(.shortcut != null)'
 
-# Compact JSON (single line)
-menucli list --app Finder --output compact
+# Click the top search result
+menucli search "new" --app Finder --output path --limit 1 \
+  | xargs -I{} menucli click "{}" --app Finder --exact
 
-# Newline-delimited JSON
-menucli list --app Finder --output ndjson
-
-# Paths only (for piping)
-menucli list --app Finder --output path
-
-# Field projection
-menucli list --app Finder --json --fields title,path,shortcut
-
-# No table headers (for awk/cut)
-menucli list --app Finder --output table --no-header
-```
-
-### Scripting Examples
-
-```sh
-# Click the first enabled menu item matching "new"
-menucli search "new" --app Finder --output path --limit 1 | xargs -I{} menucli click "{}" --app Finder --exact
-
-# List all keyboard shortcuts
-menucli list --app Finder --flat --json --fields path,shortcut | jq '.[] | select(.shortcut != null)'
-
-# Check if Dark Mode is on
-menucli state "View::Use Dark Background" --app Terminal --json | jq '.checked'
-
-# List all apps with status bar items
+# List all apps that expose status bar items
 menucli list --extras --output table
+
+# Check a toggle state in a script
+if menucli state "View::Show Sidebar" --app Finder --json | jq -e '.checked' > /dev/null; then
+  echo "Sidebar is visible"
+fi
 ```
 
-## Architecture
+### Exit codes
 
-```
-src/
-├── ax/           # macOS Accessibility API layer (AXUIElement FFI)
-│   ├── element.rs  # AXElement wrapper, batch attribute fetching
-│   ├── app.rs      # Running app resolution (name/PID/bundle ID)
-│   └── errors.rs   # AX-level errors
-├── menu/         # Domain logic
-│   ├── tree.rs     # Recursive tree builder (parallel, with extras + alternates)
-│   ├── flatten.rs  # Tree → flat list conversion
-│   ├── search.rs   # Fuzzy + exact search
-│   ├── resolve.rs  # Path/query → single node resolution
-│   └── shortcut.rs # Keyboard shortcut formatting
-├── commands/     # CLI command handlers
-│   ├── list.rs, search.rs, click.rs, toggle.rs, state.rs, apps.rs
-│   └── check_access.rs
-├── cli/          # Argument parsing + output formatting
-│   ├── args.rs     # clap derive definitions
-│   └── output.rs   # Format dispatch (JSON, table, path, etc.)
-├── types.rs      # Serializable output types (serde)
-└── main.rs       # Entry point + error handling
-```
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Runtime error |
+| 2 | Item not found |
+| 3 | Ambiguous match (multiple candidates) |
+| 10 | Accessibility permission not granted |
 
 ## License
 
-MIT
+[MIT](LICENSE)
